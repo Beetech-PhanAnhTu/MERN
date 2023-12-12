@@ -7,6 +7,11 @@ import express from 'express'
 import { createConnection } from 'typeorm'
 import { User } from './entities/User'
 import { Post } from './entities/Post'
+import { ApolloServer } from 'apollo-server-express'
+import { buildSchema } from 'type-graphql'
+import { HelloResolver } from './resolvers/hello'
+import { UserResolver } from './resolvers/user'
+const cors = require('cors');
 
 const main = async () => {
     await createConnection({
@@ -19,9 +24,22 @@ const main = async () => {
         entities: [User, Post]
     })
 
-    const app = express()
+    const app:any = express()
 
-    app.listen(4000, () => console.log(`Server listening on port 4000`))
+    app.use(cors());
+
+    //Tạo apollo server
+    const apolloServer = new ApolloServer({
+        schema: await buildSchema({resolvers: [HelloResolver, UserResolver], validate: false})
+    })
+
+    await apolloServer.start();
+
+    apolloServer.applyMiddleware({ app, cors: false })
+
+    const PORT = process.env.DB_PORT || 4000;
+
+    app.listen(PORT, () => console.log(`Server listening on port ${PORT}. GraphQL Server started on http://localhost:${PORT}${apolloServer.graphqlPath}`))
 
 }
 
